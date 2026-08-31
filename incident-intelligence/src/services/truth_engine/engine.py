@@ -9,6 +9,7 @@ from ...schemas.entities import (
 )
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
+from ..gap_detection.detector import GapDetector
 from .timeline import add_timeline_event
 
 
@@ -16,6 +17,7 @@ class TruthEngine:
 
     def __init__(self):
         self.conflict_detector = ConflictDetector()
+        self.gap_detector = GapDetector()
 
     async def process(
         self,
@@ -82,6 +84,11 @@ class TruthEngine:
         for conflict in new_conflicts:
             state.conflicts.append(conflict)
 
+        new_gaps = self.gap_detector.detect(state)
+
+        for gap in new_gaps:
+            state.unknowns.append(gap)
+
         if extraction.items:
             add_timeline_event(
                 state=state,
@@ -101,6 +108,17 @@ class TruthEngine:
                 event_type="CONFLICT_DETECTED",
                 description=conflict.description,
                 related_entities=conflict.related_items,
+            )
+
+        for gap in new_gaps:
+            add_timeline_event(
+                state=state,
+                event=event,
+                event_type="INFORMATION_GAP_DETECTED",
+                description=gap.question,
+                related_entities=[
+                    gap.related_hypothesis_id
+                ] if gap.related_hypothesis_id else [],
             )
 
         state.version += 1
