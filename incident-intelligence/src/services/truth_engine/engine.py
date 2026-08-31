@@ -1,5 +1,12 @@
 from ...schemas.transcript_event import TranscriptEvent
 from ...schemas.extraction import ExtractionResult
+from ...schemas.entities import (
+    Fact,
+    Hypothesis,
+    Action,
+    Decision,
+    EntityPriority,
+)
 from ...schemas.incident_state import IncidentState
 
 
@@ -9,41 +16,56 @@ class TruthEngine:
         self,
         event: TranscriptEvent,
         extraction: ExtractionResult,
-        state: IncidentState
+        state: IncidentState,
     ) -> IncidentState:
 
-        for item in extraction.items:
+        for index, item in enumerate(extraction.items):
+
+            entity_id = f"{item.type.lower()}-{event.event_id}-{index}"
 
             if item.type == "FACT":
-                self._process_fact(item, event, state)
+
+                fact = Fact(
+                    id=entity_id,
+                    statement=item.statement,
+                    status="UNVERIFIED",
+                    source_event_id=event.event_id,
+                )
+
+                state.facts.append(fact)
 
             elif item.type == "HYPOTHESIS":
-                self._process_hypothesis(item, event, state)
 
-            elif item.type == "DECISION":
-                self._process_decision(item, event, state)
+                hypothesis = Hypothesis(
+                    id=entity_id,
+                    statement=item.statement,
+                    status="UNCONFIRMED",
+                    source_event_id=event.event_id,
+                )
+
+                state.hypotheses.append(hypothesis)
 
             elif item.type == "ACTION":
-                self._process_action(item, event, state)
 
-            elif item.type == "EVIDENCE":
-                self._process_evidence(item, event, state)
+                action = Action(
+                    id=entity_id,
+                    title=item.statement,
+                    purpose="Extracted from incident conversation",
+                    priority=EntityPriority.MEDIUM,
+                )
+
+                state.actions.append(action)
+
+            elif item.type == "DECISION":
+
+                decision = Decision(
+                    id=entity_id,
+                    decision=item.statement,
+                    reason="Extracted from incident conversation",
+                )
+
+                state.decisions.append(decision)
 
         state.version += 1
 
         return state
-
-    def _process_fact(self, item, event, state):
-        pass
-
-    def _process_hypothesis(self, item, event, state):
-        pass
-
-    def _process_decision(self, item, event, state):
-        pass
-
-    def _process_action(self, item, event, state):
-        pass
-
-    def _process_evidence(self, item, event, state):
-        pass
