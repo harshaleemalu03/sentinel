@@ -8,9 +8,14 @@ from ...schemas.entities import (
     EntityPriority,
 )
 from ...schemas.incident_state import IncidentState
+from ..conflict_detection.detector import ConflictDetector
+from .timeline import add_timeline_event
 
 
 class TruthEngine:
+
+    def __init__(self):
+        self.conflict_detector = ConflictDetector()
 
     async def process(
         self,
@@ -18,6 +23,8 @@ class TruthEngine:
         extraction: ExtractionResult,
         state: IncidentState,
     ) -> IncidentState:
+
+        new_entity_ids = []
 
         for index, item in enumerate(extraction.items):
 
@@ -33,6 +40,7 @@ class TruthEngine:
                 )
 
                 state.facts.append(fact)
+                new_entity_ids.append(entity_id)
 
             elif item.type == "HYPOTHESIS":
 
@@ -44,6 +52,7 @@ class TruthEngine:
                 )
 
                 state.hypotheses.append(hypothesis)
+                new_entity_ids.append(entity_id)
 
             elif item.type == "ACTION":
 
@@ -55,6 +64,7 @@ class TruthEngine:
                 )
 
                 state.actions.append(action)
+                new_entity_ids.append(entity_id)
 
             elif item.type == "DECISION":
 
@@ -65,6 +75,33 @@ class TruthEngine:
                 )
 
                 state.decisions.append(decision)
+                new_entity_ids.append(entity_id)
+
+        new_conflicts = self.conflict_detector.detect(state)
+
+        for conflict in new_conflicts:
+            state.conflicts.append(conflict)
+
+        if extraction.items:
+            add_timeline_event(
+                state=state,
+                event=event,
+                event_type="INFORMATION_EXTRACTED",
+                description=(
+                    f"New incident information extracted "
+                    f"from {event.speaker.name}."
+                ),
+                related_entities=new_entity_ids,
+            )
+
+        for conflict in new_conflicts:
+            add_timeline_event(
+                state=state,
+                event=event,
+                event_type="CONFLICT_DETECTED",
+                description=conflict.description,
+                related_entities=conflict.related_items,
+            )
 
         state.version += 1
 
