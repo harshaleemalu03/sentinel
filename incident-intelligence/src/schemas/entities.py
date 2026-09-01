@@ -1,7 +1,10 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel
+
+from .source import SourceReference
 
 
 class FactStatus(str, Enum):
@@ -39,7 +42,7 @@ class Fact(BaseModel):
     id: str
     statement: str
     status: FactStatus
-    source_event_id: str
+    source: SourceReference
     evidence: list[str] = []
 
 
@@ -47,7 +50,7 @@ class Hypothesis(BaseModel):
     id: str
     statement: str
     status: HypothesisStatus
-    source_event_id: str
+    source: SourceReference
     supporting_evidence: list[str] = []
     contradicting_evidence: list[str] = []
     required_evidence: list[str] = []
