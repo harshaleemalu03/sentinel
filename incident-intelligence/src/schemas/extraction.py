@@ -1,5 +1,8 @@
+from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
-from typing import Literal
+
+from .action_extraction import ExtractedAction
 
 
 class ExtractedItem(BaseModel):
@@ -8,19 +11,21 @@ class ExtractedItem(BaseModel):
         "HYPOTHESIS",
         "DECISION",
         "ACTION",
-        "EVIDENCE"
+        "EVIDENCE",
     ]
 
     statement: str
 
     confidence: float = Field(
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
 
     supporting_evidence: list[str] = []
     contradicting_evidence: list[str] = []
     required_evidence: list[str] = []
+
+    action: Optional[ExtractedAction] = None
 
 
 class PotentialConflict(BaseModel):
@@ -30,7 +35,7 @@ class PotentialConflict(BaseModel):
 
     confidence: float = Field(
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
 
 
