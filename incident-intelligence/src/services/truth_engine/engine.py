@@ -5,7 +5,9 @@ from ...schemas.entities import (
     Hypothesis,
     Action,
     Decision,
+    Conflict,
     EntityPriority,
+    ConflictStatus,
 )
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
@@ -79,10 +81,35 @@ class TruthEngine:
                 state.decisions.append(decision)
                 new_entity_ids.append(entity_id)
 
-        new_conflicts = self.conflict_detector.detect(state)
+        new_conflicts = []
 
-        for conflict in new_conflicts:
+        for potential in extraction.potential_conflicts:
+
+            conflict_id = (
+                f"conflict-{event.event_id}-"
+                f"{len(state.conflicts)}"
+            )
+
+            conflict = Conflict(
+                id=conflict_id,
+                description=potential.explanation,
+                related_items=[],
+                status=ConflictStatus.OPEN,
+            )
+
             state.conflicts.append(conflict)
+            new_conflicts.append(conflict)
+
+        detector_conflicts = self.conflict_detector.detect(state)
+
+        for conflict in detector_conflicts:
+
+            if not any(
+                existing.id == conflict.id
+                for existing in state.conflicts
+            ):
+                state.conflicts.append(conflict)
+                new_conflicts.append(conflict)
 
         new_gaps = self.gap_detector.detect(state)
 
