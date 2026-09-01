@@ -4,6 +4,7 @@ from ...schemas.entities import (
     Fact,
     Hypothesis,
     Action,
+    ActionOwner,
     Decision,
     Conflict,
     EntityPriority,
@@ -72,11 +73,39 @@ class TruthEngine:
 
             elif item.type == "ACTION":
 
+                owner = None
+
+                if item.action and item.action.owner:
+
+                    extracted_owner = item.action.owner
+
+                    owner = ActionOwner(
+                        id=extracted_owner.id or event.speaker.id,
+                        name=extracted_owner.name,
+                        role=(
+                            extracted_owner.role
+                            or event.speaker.role
+                        ),
+                    )
+
                 action = Action(
                     id=entity_id,
-                    title=item.statement,
-                    purpose="Extracted from incident conversation",
-                    priority=EntityPriority.MEDIUM,
+                    title=(
+                        item.action.title
+                        if item.action
+                        else item.statement
+                    ),
+                    purpose=(
+                        item.action.purpose
+                        if item.action
+                        else "Extracted from incident conversation"
+                    ),
+                    owner=owner,
+                    priority=EntityPriority(
+                        item.action.priority
+                        if item.action
+                        else "MEDIUM"
+                    ),
                 )
 
                 state.actions.append(action)
