@@ -12,6 +12,7 @@ from ...schemas.entities import (
 )
 from ...schemas.source import SourceReference
 from ...schemas.approval import ApprovalRequest
+from ...schemas.participant import Participant
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
@@ -43,6 +44,36 @@ class TruthEngine:
             stated_role=event.speaker.role,
             speaker_text=event.text,
         )
+
+        participant = next(
+            (
+                participant
+                for participant in state.participants
+                if participant.id == event.speaker.id
+            ),
+            None,
+        )
+
+        if participant is None:
+
+            state.participants.append(
+                Participant(
+                    id=event.speaker.id,
+                    name=event.speaker.name,
+                    role=participant_role.role,
+                    role_confidence=participant_role.confidence,
+                    last_seen_event_id=event.event_id,
+                    active=True,
+                )
+            )
+
+        else:
+
+            participant.name = event.speaker.name
+            participant.role = participant_role.role
+            participant.role_confidence = participant_role.confidence
+            participant.last_seen_event_id = event.event_id
+            participant.active = True
 
         source = SourceReference(
             event_id=event.event_id,
