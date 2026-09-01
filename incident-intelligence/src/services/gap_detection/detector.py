@@ -18,12 +18,7 @@ class GapDetector:
 
             for required in hypothesis.required_evidence:
 
-                already_available = self._evidence_available(
-                    required,
-                    state,
-                )
-
-                if already_available:
+                if self._evidence_available(required, state):
                     continue
 
                 unknown_id = (
@@ -40,10 +35,12 @@ class GapDetector:
                 missing_information.append(
                     MissingInformation(
                         id=unknown_id,
-                        question=f"Can we verify: {required}?",
+                        question=(
+                            f"Can we verify: {required}?"
+                        ),
                         reason=(
-                            f"This evidence is required to evaluate "
-                            f"the hypothesis: "
+                            "This evidence is required to "
+                            "evaluate the hypothesis: "
                             f"{hypothesis.statement}"
                         ),
                         related_hypothesis_id=hypothesis.id,
@@ -68,6 +65,20 @@ class GapDetector:
                 fact.statement
             ):
                 return True
+
+        for hypothesis in state.hypotheses:
+
+            for evidence in hypothesis.supporting_evidence:
+                if required_normalized in self._normalize(
+                    evidence
+                ):
+                    return True
+
+            for evidence in hypothesis.contradicting_evidence:
+                if required_normalized in self._normalize(
+                    evidence
+                ):
+                    return True
 
         return False
 
