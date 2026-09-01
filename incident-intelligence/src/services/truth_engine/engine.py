@@ -15,6 +15,7 @@ from ...schemas.approval import ApprovalRequest
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
+from .fact_verifier import FactVerifier
 from .hypothesis_tracker import HypothesisTracker
 from .timeline import add_timeline_event
 
@@ -25,6 +26,7 @@ class TruthEngine:
         self.conflict_detector = ConflictDetector()
         self.gap_detector = GapDetector()
         self.hypothesis_tracker = HypothesisTracker()
+        self.fact_verifier = FactVerifier()
 
     async def process(
         self,
@@ -161,6 +163,7 @@ class TruthEngine:
                 state.decisions.append(decision)
                 new_entity_ids.append(entity_id)
 
+        self.fact_verifier.update(state)
         self.hypothesis_tracker.update(state)
 
         new_conflicts = []
