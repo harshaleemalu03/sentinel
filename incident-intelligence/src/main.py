@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from .api.events import router as events_router
+from .api.timeline import router as timeline_router
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 app.include_router(events_router)
+app.include_router(timeline_router)
 
 
 @app.get("/health")
