@@ -80,12 +80,28 @@ class TruthEngine:
                     extracted_owner = item.action.owner
 
                     owner = ActionOwner(
-                        id=extracted_owner.id or event.speaker.id,
+                        id=(
+                            extracted_owner.id
+                            or event.speaker.id
+                        ),
                         name=extracted_owner.name,
                         role=(
                             extracted_owner.role
                             or event.speaker.role
                         ),
+                    )
+
+                priority = EntityPriority.MEDIUM
+                requires_approval = False
+
+                if item.action:
+
+                    priority = EntityPriority(
+                        item.action.priority
+                    )
+
+                    requires_approval = (
+                        item.action.requires_human_approval
                     )
 
                 action = Action(
@@ -101,11 +117,8 @@ class TruthEngine:
                         else "Extracted from incident conversation"
                     ),
                     owner=owner,
-                    priority=EntityPriority(
-                        item.action.priority
-                        if item.action
-                        else "MEDIUM"
-                    ),
+                    priority=priority,
+                    requires_human_approval=requires_approval,
                 )
 
                 state.actions.append(action)
@@ -162,6 +175,7 @@ class TruthEngine:
         detector_conflicts = self.conflict_detector.detect(state)
 
         for conflict in detector_conflicts:
+
             if not any(
                 existing.id == conflict.id
                 for existing in state.conflicts
@@ -175,6 +189,7 @@ class TruthEngine:
             state.unknowns.append(gap)
 
         if extraction.items:
+
             add_timeline_event(
                 state=state,
                 event=event,
@@ -187,6 +202,7 @@ class TruthEngine:
             )
 
         for conflict in new_conflicts:
+
             add_timeline_event(
                 state=state,
                 event=event,
@@ -196,6 +212,7 @@ class TruthEngine:
             )
 
         for gap in new_gaps:
+
             add_timeline_event(
                 state=state,
                 event=event,
@@ -203,7 +220,8 @@ class TruthEngine:
                 description=gap.question,
                 related_entities=[
                     gap.related_hypothesis_id
-                ] if gap.related_hypothesis_id else [],
+                ] if gap.related_hypothesis_id
+                else [],
             )
 
         state.version += 1
