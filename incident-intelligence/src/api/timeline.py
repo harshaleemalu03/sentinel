@@ -10,7 +10,9 @@ router = APIRouter(
 
 
 @router.get("/incidents/{incident_id}/timeline")
-async def get_incident_timeline(incident_id: str):
+async def get_incident_timeline(
+    incident_id: str,
+):
 
     state = state_manager.get_incident(incident_id)
 
