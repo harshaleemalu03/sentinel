@@ -15,6 +15,7 @@ from ...schemas.approval import ApprovalRequest
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
+from ..role_recognition import RoleRecognizer
 from .fact_verifier import FactVerifier
 from .hypothesis_tracker import HypothesisTracker
 from .timeline import add_timeline_event
@@ -25,6 +26,7 @@ class TruthEngine:
     def __init__(self):
         self.conflict_detector = ConflictDetector()
         self.gap_detector = GapDetector()
+        self.role_recognizer = RoleRecognizer()
         self.hypothesis_tracker = HypothesisTracker()
         self.fact_verifier = FactVerifier()
 
@@ -37,11 +39,16 @@ class TruthEngine:
 
         new_entity_ids = []
 
+        participant_role = self.role_recognizer.recognize(
+            stated_role=event.speaker.role,
+            speaker_text=event.text,
+        )
+
         source = SourceReference(
             event_id=event.event_id,
             speaker_id=event.speaker.id,
             speaker_name=event.speaker.name,
-            speaker_role=event.speaker.role,
+            speaker_role=participant_role.role,
         )
 
         for index, item in enumerate(extraction.items):
@@ -92,7 +99,7 @@ class TruthEngine:
                         name=extracted_owner.name,
                         role=(
                             extracted_owner.role
-                            or event.speaker.role
+                            or participant_role.role
                         ),
                     )
 
@@ -138,18 +145,18 @@ class TruthEngine:
 
                     if not approval_exists:
 
-                        approval = ApprovalRequest(
-                            action_id=action.id,
-                            incident_id=state.incident_id,
-                            requested_by="Sentinel",
-                            reason=(
-                                "This action may have "
-                                "operational impact and "
-                                "requires human confirmation."
-                            ),
+                        state.approvals.append(
+                            ApprovalRequest(
+                                action_id=action.id,
+                                incident_id=state.incident_id,
+                                requested_by="Sentinel",
+                                reason=(
+                                    "This action may have "
+                                    "operational impact and "
+                                    "requires human confirmation."
+                                ),
+                            )
                         )
-
-                        state.approvals.append(approval)
 
             elif item.type == "DECISION":
 
@@ -231,7 +238,8 @@ class TruthEngine:
                 event_type="INFORMATION_EXTRACTED",
                 description=(
                     f"New incident information extracted "
-                    f"from {event.speaker.name}."
+                    f"from {event.speaker.name} "
+                    f"({participant_role.role})."
                 ),
                 related_entities=new_entity_ids,
             )
