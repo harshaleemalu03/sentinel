@@ -41,6 +41,7 @@ class TruthEngine:
                     statement=item.statement,
                     status="UNVERIFIED",
                     source_event_id=event.event_id,
+                    evidence=item.supporting_evidence,
                 )
 
                 state.facts.append(fact)
@@ -53,6 +54,9 @@ class TruthEngine:
                     statement=item.statement,
                     status="UNCONFIRMED",
                     source_event_id=event.event_id,
+                    supporting_evidence=item.supporting_evidence,
+                    contradicting_evidence=item.contradicting_evidence,
+                    required_evidence=item.required_evidence,
                 )
 
                 state.hypotheses.append(hypothesis)
