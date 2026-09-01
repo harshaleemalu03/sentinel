@@ -15,6 +15,7 @@ from ...schemas.approval import ApprovalRequest
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
+from .hypothesis_tracker import HypothesisTracker
 from .timeline import add_timeline_event
 
 
@@ -23,6 +24,7 @@ class TruthEngine:
     def __init__(self):
         self.conflict_detector = ConflictDetector()
         self.gap_detector = GapDetector()
+        self.hypothesis_tracker = HypothesisTracker()
 
     async def process(
         self,
@@ -159,6 +161,8 @@ class TruthEngine:
                 state.decisions.append(decision)
                 new_entity_ids.append(entity_id)
 
+        self.hypothesis_tracker.update(state)
+
         new_conflicts = []
 
         for potential in extraction.potential_conflicts:
@@ -209,7 +213,12 @@ class TruthEngine:
         new_gaps = self.gap_detector.detect(state)
 
         for gap in new_gaps:
-            state.unknowns.append(gap)
+
+            if not any(
+                existing.id == gap.id
+                for existing in state.unknowns
+            ):
+                state.unknowns.append(gap)
 
         if extraction.items:
 
@@ -243,7 +252,8 @@ class TruthEngine:
                 description=gap.question,
                 related_entities=[
                     gap.related_hypothesis_id
-                ] if gap.related_hypothesis_id
+                ]
+                if gap.related_hypothesis_id
                 else [],
             )
 
