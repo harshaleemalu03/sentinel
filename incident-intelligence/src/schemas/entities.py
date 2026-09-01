@@ -87,6 +87,7 @@ class Action(BaseModel):
     related_hypothesis_id: Optional[str] = None
     status: ActionStatus = ActionStatus.PENDING
     priority: EntityPriority = EntityPriority.MEDIUM
+    requires_human_approval: bool = False
 
 
 class Decision(BaseModel):
