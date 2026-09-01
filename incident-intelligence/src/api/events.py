@@ -3,30 +3,47 @@ from fastapi import APIRouter, HTTPException
 from ..schemas.transcript_event import TranscriptEvent
 from ..services.extraction.extractor import IncidentExtractor
 from ..services.extraction.mock_provider import MockProvider
+from ..services.extraction.openai_provider import OpenAIProvider
 from ..services.truth_engine.engine import TruthEngine
 from ..services.truth_engine.state_manager import IncidentStateManager
 
 
 router = APIRouter(
     prefix="/api/v1",
-    tags=["Incident Events"]
+    tags=["Incident Events"],
 )
 
 
 state_manager = IncidentStateManager()
-extractor = IncidentExtractor(MockProvider())
 truth_engine = TruthEngine()
+
+
+def create_extractor() -> IncidentExtractor:
+    """
+    Use OpenAI when an API key is configured.
+    Fall back to the mock provider for local testing.
+    """
+
+    try:
+        provider = OpenAIProvider()
+        return IncidentExtractor(provider)
+
+    except ValueError:
+        return IncidentExtractor(MockProvider())
+
+
+extractor = create_extractor()
 
 
 @router.post("/incidents/{incident_id}/events")
 async def receive_transcript_event(
     incident_id: str,
-    event: TranscriptEvent
+    event: TranscriptEvent,
 ):
     if event.incident_id != incident_id:
         raise HTTPException(
             status_code=400,
-            detail="Incident ID mismatch"
+            detail="Incident ID mismatch",
         )
 
     state = state_manager.get_incident(incident_id)
@@ -65,7 +82,7 @@ async def get_incident_state(incident_id: str):
     if state is None:
         raise HTTPException(
             status_code=404,
-            detail="Incident not found"
+            detail="Incident not found",
         )
 
     return state.model_dump()
