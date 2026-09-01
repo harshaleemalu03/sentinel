@@ -4,6 +4,7 @@ from ..schemas.transcript_event import TranscriptEvent
 from ..services.extraction.extractor import IncidentExtractor
 from ..services.extraction.mock_provider import MockProvider
 from ..services.extraction.openai_provider import OpenAIProvider
+from ..services.extraction.context_builder import build_incident_context
 from ..services.truth_engine.engine import TruthEngine
 from ..services.truth_engine.state_manager import IncidentStateManager
 
@@ -19,15 +20,9 @@ truth_engine = TruthEngine()
 
 
 def create_extractor() -> IncidentExtractor:
-    """
-    Use OpenAI when an API key is configured.
-    Fall back to the mock provider for local testing.
-    """
-
     try:
         provider = OpenAIProvider()
         return IncidentExtractor(provider)
-
     except ValueError:
         return IncidentExtractor(MockProvider())
 
@@ -55,7 +50,12 @@ async def receive_transcript_event(
             severity="SEV-1",
         )
 
-    extraction = await extractor.extract(event)
+    context = build_incident_context(state)
+
+    extraction = await extractor.extract(
+        event=event,
+        context=context,
+    )
 
     state = await truth_engine.process(
         event=event,
