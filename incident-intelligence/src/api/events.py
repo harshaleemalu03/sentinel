@@ -6,7 +6,7 @@ from ..services.extraction.mock_provider import MockProvider
 from ..services.extraction.openai_provider import OpenAIProvider
 from ..services.extraction.context_builder import build_incident_context
 from ..services.truth_engine.engine import TruthEngine
-from ..services.truth_engine.state_manager import IncidentStateManager
+from ..services.truth_engine.state_manager import state_manager
 
 
 router = APIRouter(
@@ -15,7 +15,6 @@ router = APIRouter(
 )
 
 
-state_manager = IncidentStateManager()
 truth_engine = TruthEngine()
 
 
