@@ -12,6 +12,7 @@ from .entities import (
     MissingInformation,
     TimelineEvent,
 )
+from .participant import Participant
 
 
 class IncidentState(BaseModel):
@@ -20,6 +21,7 @@ class IncidentState(BaseModel):
     severity: str
     status: str
 
+    participants: list[Participant] = []
     facts: list[Fact] = []
     hypotheses: list[Hypothesis] = []
     conflicts: list[Conflict] = []
