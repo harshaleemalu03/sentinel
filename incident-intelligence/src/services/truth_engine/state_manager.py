@@ -39,9 +39,11 @@ class IncidentStateManager:
         state: IncidentState,
     ) -> IncidentState:
 
-        state.version += 1
         state.last_updated = datetime.now(timezone.utc)
 
         self._incidents[state.incident_id] = state
 
         return state
+
+
+state_manager = IncidentStateManager()
