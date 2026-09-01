@@ -1,6 +1,8 @@
 from datetime import datetime
+
 from pydantic import BaseModel
 
+from .approval import ApprovalRequest
 from .entities import (
     Action,
     Conflict,
@@ -24,6 +26,7 @@ class IncidentState(BaseModel):
     unknowns: list[MissingInformation] = []
     decisions: list[Decision] = []
     actions: list[Action] = []
+    approvals: list[ApprovalRequest] = []
     timeline: list[TimelineEvent] = []
 
     version: int = 1
