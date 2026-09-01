@@ -85,6 +85,23 @@ class TruthEngine:
 
         for potential in extraction.potential_conflicts:
 
+            related_items = []
+
+            for fact in state.facts:
+                if fact.statement == potential.existing_statement:
+                    related_items.append(fact.id)
+
+            for hypothesis in state.hypotheses:
+                if hypothesis.statement == potential.existing_statement:
+                    related_items.append(hypothesis.id)
+
+            for entity_id, item in zip(
+                new_entity_ids,
+                extraction.items,
+            ):
+                if item.statement == potential.new_statement:
+                    related_items.append(entity_id)
+
             conflict_id = (
                 f"conflict-{event.event_id}-"
                 f"{len(state.conflicts)}"
@@ -93,7 +110,7 @@ class TruthEngine:
             conflict = Conflict(
                 id=conflict_id,
                 description=potential.explanation,
-                related_items=[],
+                related_items=list(set(related_items)),
                 status=ConflictStatus.OPEN,
             )
 
