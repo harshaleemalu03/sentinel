@@ -11,6 +11,7 @@ from ...schemas.entities import (
     ConflictStatus,
 )
 from ...schemas.source import SourceReference
+from ...schemas.approval import ApprovalRequest
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
@@ -123,6 +124,28 @@ class TruthEngine:
 
                 state.actions.append(action)
                 new_entity_ids.append(entity_id)
+
+                if requires_approval:
+
+                    approval_exists = any(
+                        approval.action_id == action.id
+                        for approval in state.approvals
+                    )
+
+                    if not approval_exists:
+
+                        approval = ApprovalRequest(
+                            action_id=action.id,
+                            incident_id=state.incident_id,
+                            requested_by="Sentinel",
+                            reason=(
+                                "This action may have "
+                                "operational impact and "
+                                "requires human confirmation."
+                            ),
+                        )
+
+                        state.approvals.append(approval)
 
             elif item.type == "DECISION":
 
