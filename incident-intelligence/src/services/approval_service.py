@@ -2,35 +2,58 @@ from ...schemas.approval import (
     ApprovalDecision,
     ApprovalRequest,
 )
+from ...schemas.incident_state import IncidentState
 
 
 class ApprovalService:
 
-    def __init__(self):
-        self._requests: dict[str, ApprovalRequest] = {}
-
     def create_request(
         self,
         request: ApprovalRequest,
+        state: IncidentState,
     ) -> ApprovalRequest:
 
-        self._requests[request.action_id] = request
+        existing = next(
+            (
+                approval
+                for approval in state.approvals
+                if approval.action_id == request.action_id
+            ),
+            None,
+        )
+
+        if existing:
+            return existing
+
+        state.approvals.append(request)
 
         return request
 
     def get_request(
         self,
         action_id: str,
+        state: IncidentState,
     ) -> ApprovalRequest | None:
 
-        return self._requests.get(action_id)
+        return next(
+            (
+                approval
+                for approval in state.approvals
+                if approval.action_id == action_id
+            ),
+            None,
+        )
 
     def decide(
         self,
         decision: ApprovalDecision,
+        state: IncidentState,
     ) -> ApprovalRequest:
 
-        request = self._requests.get(decision.action_id)
+        request = self.get_request(
+            decision.action_id,
+            state,
+        )
 
         if request is None:
             raise ValueError(
