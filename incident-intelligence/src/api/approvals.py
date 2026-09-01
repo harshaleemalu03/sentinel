@@ -5,6 +5,7 @@ from ..schemas.approval import (
     ApprovalRequest,
 )
 from ..services.approval_service import ApprovalService
+from ..services.truth_engine.state_manager import state_manager
 
 
 router = APIRouter(
@@ -28,7 +29,41 @@ async def create_approval_request(
             detail="Incident ID mismatch",
         )
 
-    result = approval_service.create_request(request)
+    state = state_manager.get_incident(incident_id)
+
+    if state is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found",
+        )
+
+    action = next(
+        (
+            action
+            for action in state.actions
+            if action.id == request.action_id
+        ),
+        None,
+    )
+
+    if action is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Action not found",
+        )
+
+    if not action.requires_human_approval:
+        raise HTTPException(
+            status_code=400,
+            detail="This action does not require human approval",
+        )
+
+    result = approval_service.create_request(
+        request=request,
+        state=state,
+    )
+
+    state_manager.update_incident(state)
 
     return {
         "status": "pending_approval",
@@ -36,21 +71,28 @@ async def create_approval_request(
     }
 
 
-@router.get("/incidents/{incident_id}/approvals/{action_id}")
+@router.get(
+    "/incidents/{incident_id}/approvals/{action_id}"
+)
 async def get_approval(
     incident_id: str,
     action_id: str,
 ):
 
-    request = approval_service.get_request(action_id)
+    state = state_manager.get_incident(incident_id)
 
-    if request is None:
+    if state is None:
         raise HTTPException(
             status_code=404,
-            detail="Approval request not found",
+            detail="Incident not found",
         )
 
-    if request.incident_id != incident_id:
+    request = approval_service.get_request(
+        action_id=action_id,
+        state=state,
+    )
+
+    if request is None:
         raise HTTPException(
             status_code=404,
             detail="Approval request not found",
@@ -59,7 +101,9 @@ async def get_approval(
     return request.model_dump()
 
 
-@router.post("/incidents/{incident_id}/approvals/decision")
+@router.post(
+    "/incidents/{incident_id}/approvals/decision"
+)
 async def decide_approval(
     incident_id: str,
     decision: ApprovalDecision,
@@ -71,14 +115,27 @@ async def decide_approval(
             detail="Incident ID mismatch",
         )
 
+    state = state_manager.get_incident(incident_id)
+
+    if state is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found",
+        )
+
     try:
-        result = approval_service.decide(decision)
+        result = approval_service.decide(
+            decision=decision,
+            state=state,
+        )
 
     except ValueError as error:
         raise HTTPException(
             status_code=404,
             detail=str(error),
         )
+
+    state_manager.update_incident(state)
 
     return {
         "status": "approval_updated",
