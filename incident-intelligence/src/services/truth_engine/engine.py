@@ -9,6 +9,7 @@ from ...schemas.entities import (
     EntityPriority,
     ConflictStatus,
 )
+from ...schemas.source import SourceReference
 from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
@@ -30,6 +31,13 @@ class TruthEngine:
 
         new_entity_ids = []
 
+        source = SourceReference(
+            event_id=event.event_id,
+            speaker_id=event.speaker.id,
+            speaker_name=event.speaker.name,
+            speaker_role=event.speaker.role,
+        )
+
         for index, item in enumerate(extraction.items):
 
             entity_id = f"{item.type.lower()}-{event.event_id}-{index}"
@@ -40,7 +48,7 @@ class TruthEngine:
                     id=entity_id,
                     statement=item.statement,
                     status="UNVERIFIED",
-                    source_event_id=event.event_id,
+                    source=source,
                     evidence=item.supporting_evidence,
                 )
 
@@ -53,7 +61,7 @@ class TruthEngine:
                     id=entity_id,
                     statement=item.statement,
                     status="UNCONFIRMED",
-                    source_event_id=event.event_id,
+                    source=source,
                     supporting_evidence=item.supporting_evidence,
                     contradicting_evidence=item.contradicting_evidence,
                     required_evidence=item.required_evidence,
@@ -80,6 +88,7 @@ class TruthEngine:
                     id=entity_id,
                     decision=item.statement,
                     reason="Extracted from incident conversation",
+                    proposed_by=event.speaker.name,
                 )
 
                 state.decisions.append(decision)
@@ -124,7 +133,6 @@ class TruthEngine:
         detector_conflicts = self.conflict_detector.detect(state)
 
         for conflict in detector_conflicts:
-
             if not any(
                 existing.id == conflict.id
                 for existing in state.conflicts
