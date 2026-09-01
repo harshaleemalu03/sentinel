@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from ..schemas.transcript_event import TranscriptEvent
+from ..schemas.intelligence_response import IntelligenceResponse
 from ..services.extraction.extractor import IncidentExtractor
 from ..services.extraction.mock_provider import MockProvider
 from ..services.extraction.openai_provider import OpenAIProvider
@@ -29,11 +30,15 @@ def create_extractor() -> IncidentExtractor:
 extractor = create_extractor()
 
 
-@router.post("/incidents/{incident_id}/events")
+@router.post(
+    "/incidents/{incident_id}/events",
+    response_model=IntelligenceResponse,
+)
 async def receive_transcript_event(
     incident_id: str,
     event: TranscriptEvent,
 ):
+
     if event.incident_id != incident_id:
         raise HTTPException(
             status_code=400,
@@ -64,17 +69,18 @@ async def receive_transcript_event(
 
     state_manager.update_incident(state)
 
-    return {
-        "status": "processed",
-        "incident_id": incident_id,
-        "event_id": event.event_id,
-        "extracted": extraction.model_dump(),
-        "incident_state": state.model_dump(),
-    }
+    return IntelligenceResponse(
+        incident_id=incident_id,
+        event_id=event.event_id,
+        state_version=state.version,
+        incident_state=state,
+    )
 
 
 @router.get("/incidents/{incident_id}/state")
-async def get_incident_state(incident_id: str):
+async def get_incident_state(
+    incident_id: str,
+):
 
     state = state_manager.get_incident(incident_id)
 
