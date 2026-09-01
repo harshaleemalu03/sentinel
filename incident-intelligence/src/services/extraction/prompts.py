@@ -40,6 +40,16 @@ related_hypothesis:
 The hypothesis that the action is intended to investigate,
 if one is explicitly identifiable.
 
+requires_human_approval:
+Set this to TRUE when executing the action could change production
+systems, affect customers, cause service disruption, modify data,
+rollback/deploy code, restart critical infrastructure, or otherwise
+create meaningful operational impact.
+
+Set this to FALSE for observation-only or investigation tasks such as
+checking logs, viewing dashboards, reading metrics, or gathering
+information.
+
 IMPORTANT OWNER RULES:
 
 1. Never invent an owner.
@@ -49,6 +59,16 @@ IMPORTANT OWNER RULES:
 4. If someone says "I'll check the logs", the current speaker is the owner.
 5. If ownership is unclear, return owner as null.
 6. A person's role alone does not mean they own the task.
+
+IMPORTANT APPROVAL RULES:
+
+1. Never execute a critical action automatically.
+2. Critical production-impacting actions must require human approval.
+3. Investigation-only actions normally do not require approval.
+4. If uncertain whether an action is operationally risky, prefer
+   requires_human_approval = TRUE.
+5. Do not claim that an action was executed merely because someone
+   discussed it.
 
 HYPOTHESIS RULES:
 
@@ -107,6 +127,8 @@ For hypotheses, identify supporting evidence, contradicting evidence,
 and the specific evidence still required to verify or reject them.
 
 For actions, identify the owner only when ownership is explicitly stated.
+
+For operationally risky actions, indicate that human approval is required.
 
 Also identify any genuine potential conflicts between the new statement
 and existing incident information.
