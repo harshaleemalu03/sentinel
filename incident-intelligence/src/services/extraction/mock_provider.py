@@ -44,4 +44,28 @@ class MockProvider(LLMProvider):
                 )
             )
 
+        # Detect explicit action requests
+        if any(
+            phrase in text
+            for phrase in [
+                "action required",
+                "investigate",
+                "check",
+                "verify",
+                "fix",
+                "restart",
+                "create a ticket",
+                "assign",
+                "must check",
+                "need to"
+            ]
+        ):
+            items.append(
+                ExtractedItem(
+                    type="ACTION",
+                    statement=event.text,
+                    confidence=0.95
+                )
+            )
+
         return ExtractionResult(items=items)
