@@ -1,8 +1,8 @@
-from ...schemas.approval import (
+from ..schemas.approval import (
     ApprovalDecision,
     ApprovalRequest,
 )
-from ...schemas.incident_state import IncidentState
+from ..schemas.incident_state import IncidentState
 
 
 class ApprovalService:
