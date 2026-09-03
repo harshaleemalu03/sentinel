@@ -6,7 +6,7 @@
     },
     "backend": {
       "root": "incident-intelligence",
-      "entrypoint": "src/main.py",
+      "entrypoint": "src.main:app",
       "framework": "fastapi"
     }
   },
