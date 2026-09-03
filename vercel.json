@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd incident-dashboard && npm run build",
+  "outputDirectory": "incident-dashboard/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
