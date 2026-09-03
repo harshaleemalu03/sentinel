@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "incident-dashboard/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "incident-intelligence/",
+      "entrypoint": "src.main:app",
+      "routePrefix": "/api"
+    }
+  }
+}
