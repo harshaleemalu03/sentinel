@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Action",
+  "description": "An action item tracked by the Coordination & Integrations module. Created either manually or derived from a Hypothesis/Unknown emitted by the Truth Engine.",
+  "type": "object",
+  "required": ["id", "incidentId", "title", "status", "createdAt", "source"],
+  "properties": {
+    "id": { "type": "string", "description": "UUID for this action" },
+    "incidentId": { "type": "string", "description": "The incident this action belongs to" },
+    "title": { "type": "string", "description": "Short description, e.g. 'Check payment-service deployment diff'" },
+    "description": { "type": "string" },
+    "source": {
+      "type": "object",
+      "description": "What triggered this action",
+      "properties": {
+        "type": { "type": "string", "enum": ["hypothesis", "unknown", "manual", "conflict"] },
+        "refId": { "type": "string", "description": "id of the Hypothesis/Unknown/Conflict in IncidentState, if any" }
+      }
+    },
+    "owner": {
+      "type": ["object", "null"],
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "contact": { "type": "string" }
+      }
+    },
+    "deadline": { "type": ["string", "null"], "format": "date-time" },
+    "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"], "default": "medium" },
+    "status": {
+      "type": "string",
+      "enum": ["proposed", "pending_approval", "approved", "rejected", "in_progress", "done", "failed"],
+      "description": "proposed = AI suggested it; pending_approval = awaiting human; approved/rejected = human decision; in_progress/done/failed = execution state"
+    },
+    "requiresApproval": { "type": "boolean", "default": true, "description": "Critical/destructive actions (e.g. rollback) must be true" },
+    "approval": {
+      "type": ["object", "null"],
+      "properties": {
+        "decidedBy": { "type": "string" },
+        "decidedAt": { "type": "string", "format": "date-time" },
+        "decision": { "type": "string", "enum": ["approve", "reject"] },
+        "note": { "type": "string" }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "description": "External refs created for this action",
+      "properties": {
+        "slackMessageTs": { "type": "string" },
+        "jiraIssueKey": { "type": "string" },
+        "pagerdutyIncidentId": { "type": "string" }
+      }
+    },
+    "result": {
+      "type": ["object", "null"],
+      "description": "Evidence/outcome sent back to the Truth Engine once the action completes",
+      "properties": {
+        "summary": { "type": "string" },
+        "evidenceUrl": { "type": "string" },
+        "reportedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

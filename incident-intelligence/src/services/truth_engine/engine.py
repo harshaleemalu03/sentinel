@@ -17,6 +17,7 @@ from ...schemas.incident_state import IncidentState
 from ..conflict_detection.detector import ConflictDetector
 from ..gap_detection.detector import GapDetector
 from ..role_recognition import RoleRecognizer
+from ..action_dispatcher import dispatch_action
 from .fact_verifier import FactVerifier
 from .hypothesis_tracker import HypothesisTracker
 from .timeline import add_timeline_event
@@ -166,6 +167,28 @@ class TruthEngine:
 
                 state.actions.append(action)
                 new_entity_ids.append(entity_id)
+
+                # Send the newly created action to Person 3
+                # (Coordination & Integrations).
+                #
+                # Person 3 is responsible for:
+                # - human approval
+                # - Slack notifications
+                # - Jira
+                # - PagerDuty for critical actions
+                # - execution and result reporting
+                try:
+                    await dispatch_action(
+                        action,
+                        incident_id=state.incident_id,
+                    )
+                except Exception as exc:
+                    # Failure of the integration service should not
+                    # stop the Truth Engine from processing the incident.
+                    print(
+                        f"[action-dispatcher] Failed to dispatch "
+                        f"action {action.id}: {exc}"
+                    )
 
                 if requires_approval:
 
