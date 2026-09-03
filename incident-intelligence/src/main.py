@@ -1,28 +1,26 @@
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.events import router as events_router
-from .api.timeline import router as timeline_router
-from .api.approvals import router as approvals_router
-from .api.summary import router as summary_router
-
-
-load_dotenv()
+from src.api.events import router as events_router
+from src.api.timeline import router as timeline_router
+from src.api.approvals import router as approvals_router
+from src.api.summary import router as summary_router
 
 
 app = FastAPI(
     title="Sentinel Incident Intelligence",
-    description="Incident intelligence and Truth Engine for Sentinel",
-    version="0.1.0",
+    description="AI-powered incident intelligence and Truth Engine for Sentinel.",
+    version="1.0.0",
 )
 
 
-# Allow the React/Vite frontend to communicate with FastAPI
+# Allow the Vercel dashboard and local development frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "http://localhost:3000",
+        "https://sentinel-six-murex.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -30,15 +28,25 @@ app.add_middleware(
 )
 
 
+# API routers
 app.include_router(events_router)
 app.include_router(timeline_router)
 app.include_router(approvals_router)
 app.include_router(summary_router)
 
 
-@app.get("/health")
-async def health_check():
+@app.get("/")
+def root():
     return {
-        "status": "ok",
+        "name": "Sentinel Incident Intelligence",
+        "status": "running",
+        "version": "1.0.0",
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
         "service": "incident-intelligence",
     }
