@@ -19,7 +19,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,14 +27,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(events_router)
 app.include_router(timeline_router)
 app.include_router(approvals_router)
 app.include_router(summary_router)
 
 
-@app.get("/api")
+@app.get("/")
 def root():
     return {
         "name": "Sentinel Incident Intelligence",
@@ -44,7 +42,7 @@ def root():
     }
 
 
-@app.get("/api/health")
+@app.get("/health")
 def health():
     return {
         "status": "healthy",
