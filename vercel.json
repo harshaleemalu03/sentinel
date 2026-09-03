@@ -1,14 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "incident-dashboard/",
-      "framework": "vite"
+  "experimentalServices": {
+    "web": {
+      "entrypoint": "incident-dashboard",
+      "routePrefix": "/"
     },
-    "backend": {
-      "root": "incident-intelligence/",
-      "entrypoint": "src.main:app",
-      "routePrefix": "/api"
+    "api": {
+      "entrypoint": "incident-intelligence/src/main.py",
+      "routePrefix": "/api",
+      "framework": "fastapi"
     }
   }
 }
