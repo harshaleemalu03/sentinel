@@ -1,0 +1,9 @@
+{
+  "name": "sentinel",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "cd incident-dashboard && npm install && npm run build"
+  }
+}
