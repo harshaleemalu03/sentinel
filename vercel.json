@@ -2,17 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "frontend": {
-      "root": "incident-dashboard/",
-      "framework": "vite"
+      "root": "incident-dashboard"
     },
     "backend": {
-      "root": "incident-intelligence/",
-      "entrypoint": "src/main.py"
+      "root": "incident-intelligence",
+      "entrypoint": "src/main.py",
+      "framework": "fastapi"
     }
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/api/(.*)",
       "destination": {
         "service": "backend"
       }
