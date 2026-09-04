@@ -35,7 +35,7 @@ app.include_router(approvals_router)
 app.include_router(summary_router)
 
 
-@app.get("/")
+@app.get("/api")
 def root():
     return {
         "name": "Sentinel Incident Intelligence",
@@ -44,8 +44,12 @@ def root():
     }
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health():
+    return {
+        "status": "healthy",
+        "service": "incident-intelligence",
+    }
     return {
         "status": "healthy",
         "service": "incident-intelligence",
