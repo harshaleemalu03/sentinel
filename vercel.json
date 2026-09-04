@@ -16,49 +16,7 @@
   },
   "rewrites": [
     {
-      "source": "/api/generate-agora-token",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/generate-agora-token/(.*)",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/invite-agent",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/invite-agent/(.*)",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/stop-conversation",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/stop-conversation/(.*)",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/chat/(.*)",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/transcript",
+      "source": "/voice",
       "destination": {
         "service": "agora"
       }
@@ -70,7 +28,31 @@
       }
     },
     {
-      "source": "/voice",
+      "source": "/api/transcript",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/generate-agora-token",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/invite-agent",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/stop-conversation",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/chat/(.*)",
       "destination": {
         "service": "agora"
       }
