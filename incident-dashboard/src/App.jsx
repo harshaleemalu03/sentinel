@@ -37,9 +37,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-
 const API_BASE = "";
-
 /* =========================================================
    DATA
 ========================================================= */
@@ -198,93 +196,90 @@ function App() {
 
   const [incidents, setIncidents] = useState(initialIncidents);
   const [backendConnected, setBackendConnected] = useState(false);
-
   useEffect(() => {
-    fetch(`${API_BASE}/api/health`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Backend not responding");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Sentinel Backend:", data);
-        setBackendConnected(true);
-      })
-      .catch((error) => {
-        console.error("Backend connection failed:", error);
-        setBackendConnected(false);
-      });
-  }, []);
-
+  fetch(`${API_BASE}/api/health`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Backend not responding");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Sentinel Backend:", data);
+      setBackendConnected(true);
+    })
+    .catch((error) => {
+      console.error("Backend connection failed:", error);
+      setBackendConnected(false);
+    });
+}, []);
   const [timeline, setTimeline] = useState(initialTimeline);
   const [incidentSummary, setIncidentSummary] = useState(null);
+  useEffect(() => {
+  fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch timeline");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Sentinel Timeline:", data);
+
+      setTimeline(data.timeline);
+    })
+    .catch((error) => {
+      console.error("Timeline fetch failed:", error);
+    });
+}, []);
+
+useEffect(() => {
+  fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch incident summary");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Sentinel Incident Summary:", JSON.stringify(data, null, 2));
+      setIncidentSummary(data);
+    })
+    .catch((error) => {
+      console.error("Incident summary fetch failed:", error);
+    });
+}, []);
+
+
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch timeline");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Sentinel Timeline:", data);
-        setTimeline(data.timeline);
-      })
-      .catch((error) => {
-        console.error("Timeline fetch failed:", error);
-      });
-  }, []);
+  fetch(`${API_BASE}/api/v1/incidents/INC-2048/state`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch incident state");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Sentinel Incident State:", data);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch incident summary");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log(
-          "Sentinel Incident Summary:",
-          JSON.stringify(data, null, 2)
-        );
-        setIncidentSummary(data);
-      })
-      .catch((error) => {
-        console.error("Incident summary fetch failed:", error);
-      });
-  }, []);
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/v1/incidents/INC-2048/state`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch incident state");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Sentinel Incident State:", data);
-
-        setIncidents((currentIncidents) =>
-          currentIncidents.map((incident) =>
-            incident.id === data.incident_id
-              ? {
-                  ...incident,
-                  title: data.title,
-                  severity: data.severity,
-                  status: data.status,
-                }
-              : incident
-          )
-        );
-      })
-      .catch((error) => {
-        console.error("Incident state fetch failed:", error);
-      });
-  }, []);
+      setIncidents((currentIncidents) =>
+        currentIncidents.map((incident) =>
+          incident.id === data.incident_id
+            ? {
+                ...incident,
+                title: data.title,
+                severity: data.severity,
+                status: data.status,
+              }
+            : incident
+        )
+      );
+    })
+    .catch((error) => {
+      console.error("Incident state fetch failed:", error);
+    });
+}, []);
 
   const [systemHealth, setSystemHealth] = useState(98.7);
   const [responseTime, setResponseTime] = useState("4m 12s");
@@ -321,6 +316,89 @@ function App() {
   };
 
   /* =========================================================
+     BACKEND EVENT INGESTION
+  ========================================================= */
+
+  const sendTranscriptEvent = async ({ eventId, text, speaker }) => {
+    const response = await fetch(
+      `${API_BASE}/api/v1/incidents/INC-2048/events`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          incident_id: "INC-2048",
+          timestamp: new Date().toISOString(),
+          speaker,
+          text,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Backend event failed (${response.status}): ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.incident_state) {
+      const state = data.incident_state;
+
+      setIncidents((currentIncidents) =>
+        currentIncidents.map((incident) =>
+          incident.id === state.incident_id
+            ? {
+                ...incident,
+                title: state.title,
+                severity: state.severity,
+                status: state.status,
+                time: "now",
+              }
+            : incident
+        )
+      );
+
+      setSelectedIncident((current) =>
+        current.id === state.incident_id
+          ? {
+              ...current,
+              title: state.title,
+              severity: state.severity,
+              status: state.status,
+              time: "now",
+            }
+          : current
+      );
+    }
+
+    try {
+      const [timelineResponse, summaryResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`),
+        fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`),
+      ]);
+
+      if (timelineResponse.ok) {
+        const timelineData = await timelineResponse.json();
+        setTimeline(timelineData.timeline || []);
+      }
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        setIncidentSummary(summaryData);
+      }
+    } catch (refreshError) {
+      console.error("Failed to refresh incident intelligence:", refreshError);
+    }
+
+    return data;
+  };
+
+  /* =========================================================
      LIVE SIMULATION
   ========================================================= */
 
@@ -331,6 +409,12 @@ function App() {
     setSimulationStep(1);
     setAiStatus("Analyzing signals...");
     setAiScore(87);
+
+    sendTranscriptEvent({
+      eventId: `SIM-${Date.now()}-1`,
+      speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+      text: "Simulation started. Correlating application, infrastructure and deployment signals.",
+    }).catch((error) => console.error("Simulation event 1 failed:", error));
 
     setTimeline((previous) => [
       ...previous,
@@ -368,6 +452,12 @@ function App() {
       setAiStatus("Correlating evidence...");
       setAiScore(91);
       setSystemHealth(96.8);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-2`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Correlated deployment v4.8.2 with elevated payment error rates across multiple signals.",
+      }).catch((error) => console.error("Simulation event 2 failed:", error));
       setResponseTime("3m 48s");
 
       setTimeline((previous) => [
@@ -389,6 +479,12 @@ function App() {
       setAiStatus("Root cause identified");
       setAiScore(96);
       setSystemHealth(97.9);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-3`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Root cause candidate identified: payment-service deployment v4.8.2.",
+      }).catch((error) => console.error("Simulation event 3 failed:", error));
 
       setTimeline((previous) => [
         ...previous,
@@ -427,6 +523,12 @@ function App() {
       setAiStatus("Resolution verified");
       setAiScore(98);
       setSystemHealth(99.2);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-4`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Recovery verified. Payment API error rate returned to normal operating range.",
+      }).catch((error) => console.error("Simulation event 4 failed:", error));
       setResponseTime("3m 21s");
       setResolvedToday((value) => value + 1);
 
@@ -1728,7 +1830,7 @@ function IntelligencePanel({
 
           <p>
             {incidentSummary?.facts?.[0]?.statement ||
-              "Recent payment-service deployment is the most probable source of the current degradation."}
+               "Recent payment-service deployment is the most probable source of the current degradation."}
           </p>
         </div>
       </div>
