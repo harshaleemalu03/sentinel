@@ -37,7 +37,9 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-const API_BASE = "http://localhost:8000";
+
+const API_BASE = "";
+
 /* =========================================================
    DATA
 ========================================================= */
@@ -196,90 +198,93 @@ function App() {
 
   const [incidents, setIncidents] = useState(initialIncidents);
   const [backendConnected, setBackendConnected] = useState(false);
+
   useEffect(() => {
-  fetch(`${API_BASE}/health`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Backend not responding");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Sentinel Backend:", data);
-      setBackendConnected(true);
-    })
-    .catch((error) => {
-      console.error("Backend connection failed:", error);
-      setBackendConnected(false);
-    });
-}, []);
+    fetch(`${API_BASE}/api/health`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Backend not responding");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Sentinel Backend:", data);
+        setBackendConnected(true);
+      })
+      .catch((error) => {
+        console.error("Backend connection failed:", error);
+        setBackendConnected(false);
+      });
+  }, []);
+
   const [timeline, setTimeline] = useState(initialTimeline);
   const [incidentSummary, setIncidentSummary] = useState(null);
-  useEffect(() => {
-  fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Failed to fetch timeline");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Sentinel Timeline:", data);
-
-      setTimeline(data.timeline);
-    })
-    .catch((error) => {
-      console.error("Timeline fetch failed:", error);
-    });
-}, []);
-
-useEffect(() => {
-  fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Failed to fetch incident summary");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Sentinel Incident Summary:", JSON.stringify(data, null, 2));
-      setIncidentSummary(data);
-    })
-    .catch((error) => {
-      console.error("Incident summary fetch failed:", error);
-    });
-}, []);
-
-
 
   useEffect(() => {
-  fetch(`${API_BASE}/api/v1/incidents/INC-2048/state`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Failed to fetch incident state");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Sentinel Incident State:", data);
+    fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch timeline");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Sentinel Timeline:", data);
+        setTimeline(data.timeline);
+      })
+      .catch((error) => {
+        console.error("Timeline fetch failed:", error);
+      });
+  }, []);
 
-      setIncidents((currentIncidents) =>
-        currentIncidents.map((incident) =>
-          incident.id === data.incident_id
-            ? {
-                ...incident,
-                title: data.title,
-                severity: data.severity,
-                status: data.status,
-              }
-            : incident
-        )
-      );
-    })
-    .catch((error) => {
-      console.error("Incident state fetch failed:", error);
-    });
-}, []);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch incident summary");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log(
+          "Sentinel Incident Summary:",
+          JSON.stringify(data, null, 2)
+        );
+        setIncidentSummary(data);
+      })
+      .catch((error) => {
+        console.error("Incident summary fetch failed:", error);
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/incidents/INC-2048/state`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch incident state");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Sentinel Incident State:", data);
+
+        setIncidents((currentIncidents) =>
+          currentIncidents.map((incident) =>
+            incident.id === data.incident_id
+              ? {
+                  ...incident,
+                  title: data.title,
+                  severity: data.severity,
+                  status: data.status,
+                }
+              : incident
+          )
+        );
+      })
+      .catch((error) => {
+        console.error("Incident state fetch failed:", error);
+      });
+  }, []);
 
   const [systemHealth, setSystemHealth] = useState(98.7);
   const [responseTime, setResponseTime] = useState("4m 12s");
@@ -1723,7 +1728,7 @@ function IntelligencePanel({
 
           <p>
             {incidentSummary?.facts?.[0]?.statement ||
-               "Recent payment-service deployment is the most probable source of the current degradation."}
+              "Recent payment-service deployment is the most probable source of the current degradation."}
           </p>
         </div>
       </div>
