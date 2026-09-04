@@ -58,18 +58,10 @@ export function createTranscriptEvent(params: {
 export async function sendTranscriptToIntelligence(
   event: SentinelTranscriptEvent,
 ): Promise<SendTranscriptResult> {
-  const baseUrl = process.env.SENTINEL_INTELLIGENCE_URL;
-
-  if (!baseUrl) {
-    return {
-      success: false,
-      status: 500,
-      error: 'SENTINEL_INTELLIGENCE_URL is not configured',
-    };
-  }
-
+  // Frontend and Incident Intelligence are deployed
+  // under the same Vercel project/domain.
   const url =
-    `${baseUrl.replace(/\/$/, '')}/api/v1/incidents/` +
+    `/api/v1/incidents/` +
     `${encodeURIComponent(event.incident_id)}/events`;
 
   try {
