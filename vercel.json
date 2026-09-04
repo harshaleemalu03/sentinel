@@ -8,9 +8,73 @@
       "root": "incident-intelligence",
       "entrypoint": "src.main:app",
       "framework": "fastapi"
+    },
+    "agora": {
+      "root": "agora-voice",
+      "framework": "nextjs"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/generate-agora-token",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/generate-agora-token/(.*)",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/invite-agent",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/invite-agent/(.*)",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/stop-conversation",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/stop-conversation/(.*)",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/chat/(.*)",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/api/transcript",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/voice/(.*)",
+      "destination": {
+        "service": "agora"
+      }
+    },
+    {
+      "source": "/voice",
+      "destination": {
+        "service": "agora"
+      }
+    },
     {
       "source": "/api/(.*)",
       "destination": {
