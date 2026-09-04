@@ -2,23 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "frontend": {
-      "root": "incident-dashboard"
+      "root": "incident-dashboard",
+      "routePrefix": "/"
     },
     "backend": {
       "root": "incident-intelligence",
       "entrypoint": "src.main:app",
-      "framework": "fastapi"
+      "framework": "fastapi",
+      "routePrefix": "/api"
     },
     "agora": {
       "root": "agora-voice",
-      "framework": "nextjs"
+      "framework": "nextjs",
+      "routePrefix": "/voice"
     }
   },
   "rewrites": [
     {
-      "source": "/voice",
+      "source": "/api/(.*)",
       "destination": {
-        "service": "agora"
+        "service": "backend"
       }
     },
     {
@@ -28,39 +31,9 @@
       }
     },
     {
-      "source": "/api/transcript",
+      "source": "/voice",
       "destination": {
         "service": "agora"
-      }
-    },
-    {
-      "source": "/api/generate-agora-token",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/invite-agent",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/stop-conversation",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/chat/(.*)",
-      "destination": {
-        "service": "agora"
-      }
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "backend"
       }
     },
     {
