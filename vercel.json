@@ -1,18 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
+  "experimentalServices": {
     "frontend": {
-      "root": "incident-dashboard",
+      "entrypoint": "incident-dashboard",
       "routePrefix": "/"
     },
     "backend": {
-      "root": "incident-intelligence",
-      "entrypoint": "src.main:app",
+      "entrypoint": "incident-intelligence",
       "framework": "fastapi",
       "routePrefix": "/api"
     },
     "agora": {
-      "root": "agora-voice",
+      "entrypoint": "agora-voice",
       "framework": "nextjs",
       "routePrefix": "/voice"
     }
