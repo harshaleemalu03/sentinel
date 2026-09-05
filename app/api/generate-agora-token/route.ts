@@ -21,15 +21,6 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_AGORA_APP_CERTIFICATE ||
     process.env.AGORA_APP_CERTIFICATE;
 
-  if (!APP_ID || !APP_CERTIFICATE) {
-    return NextResponse.json(
-      {
-        error: 'Agora credentials are not set. Set NEXT_PUBLIC_AGORA_APP_ID and NEXT_AGORA_APP_CERTIFICATE.',
-      },
-      { status: 500 },
-    );
-  }
-
   const { searchParams } = new URL(request.url);
 
   const uidStr = searchParams.get('uid');
@@ -50,6 +41,17 @@ export async function GET(request: NextRequest) {
   const incidentId =
     searchParams.get('incidentId') ||
     'INC-2048';
+
+  if (!APP_ID || !APP_CERTIFICATE) {
+    return NextResponse.json({
+      token: 'DEMO_FALLBACK_TOKEN',
+      uid: uid.toString(),
+      channel: channelName,
+      incidentId,
+      demo_mode: true,
+      notice: 'Agora App ID not configured in environment. Running in Local Audio Bridge mode.',
+    });
+  }
 
 
   const expirationTime =

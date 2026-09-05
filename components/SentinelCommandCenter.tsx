@@ -364,7 +364,7 @@ export default function SentinelCommandCenter() {
   };
 
   // Inline microphone voice recording toggle (Speech-to-Text)
-  const toggleInlineRecording = () => {
+  const toggleInlineRecording = async () => {
     if (isRecording) {
       if (inlineRecognitionRef.current) {
         try {
@@ -377,11 +377,26 @@ export default function SentinelCommandCenter() {
       return;
     }
 
+    // Request microphone permission first
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Release immediate test stream
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    } catch (permErr: any) {
+      console.warn('Mic permission error:', permErr);
+      if (permErr.name === 'NotAllowedError' || permErr.name === 'PermissionDeniedError') {
+        alert('Microphone permission was denied. Please allow microphone access in your browser address bar.');
+        return;
+      }
+    }
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Your browser does not support Web Speech API. Please use Chrome, Edge, or join the Agora Incident Room at the top.');
+      alert('Your browser does not support the Web Speech API (Chrome and Edge work best). You can type statements or click the Quick Voice Phrases below!');
       return;
     }
 
@@ -405,6 +420,9 @@ export default function SentinelCommandCenter() {
 
       recognition.onerror = (event: any) => {
         console.warn('Inline recording status:', event.error);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone permissions in your browser URL bar.');
+        }
         setIsRecording(false);
       };
 
@@ -756,6 +774,38 @@ ${timeline.map((t) => `- **${t.timestamp}** [${t.event_type}]: ${t.description}`
                   className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors"
                 >
                   <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Quick Operational Voice Phrases */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-[#30363d]/50">
+                <span className="text-[10px] uppercase font-bold text-zinc-400 mr-1">Quick Voice Phrases:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendEvent("Payment API latency has crossed 8.4 seconds. US-East pods failing health checks.", "Priya Sharma", "Incident Commander");
+                  }}
+                  className="text-[10px] px-2 py-0.5 rounded bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] text-zinc-300 hover:text-white transition-colors"
+                >
+                  🎙️ "Latency &gt; 8.4s"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendEvent("Database connection pool is 100% exhausted. Redis cache hit rate dropped to 12%.", "Rahul Mehta", "DevOps Engineer");
+                  }}
+                  className="text-[10px] px-2 py-0.5 rounded bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d] text-zinc-300 hover:text-white transition-colors"
+                >
+                  🎙️ "DB pool exhausted"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendEvent("I recommend an emergency rollback of payment-service from v4.8.2 to v4.8.1.", "Sentinel", "AI Incident Commander");
+                  }}
+                  className="text-[10px] px-2 py-0.5 rounded bg-[#0d1117] hover:bg-[#21262d] border border-indigo-500/40 text-indigo-300 hover:text-white transition-colors"
+                >
+                  🎙️ "Rollback to v4.8.1"
                 </button>
               </div>
             </form>

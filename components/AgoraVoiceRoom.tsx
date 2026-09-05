@@ -40,26 +40,138 @@ export default function AgoraVoiceRoom({
   const rtcClientRef = useRef<any>(null);
   const localAudioTrackRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
+  const isLiveRef = useRef<boolean>(false);
+
+  // Audio level visualizer analyzer
+  const setupAudioVisualizer = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateVolume = () => {
+        if (!isLiveRef.current) return;
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        setMicVolume(Math.min(100, Math.round((avg / 128) * 100)));
+        requestAnimationFrame(updateVolume);
+      };
+      updateVolume();
+    } catch (err: any) {
+      console.warn('Audio visualizer init error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrorMsg('Microphone access was denied. Please allow microphone permissions in your browser.');
+      }
+    }
+  };
+
+  // Browser speech recognition fallback for seamless real-time mic turns
+  const setupSpeechRecognition = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.warn('SpeechRecognition API not available in this browser.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (interimTranscript) {
+          setCurrentTurn(interimTranscript);
+        }
+
+        if (finalTranscript.trim()) {
+          setCurrentTurn(null);
+          onTranscriptTurn(finalTranscript.trim(), 'Incident Responder', false);
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn('Speech recognition status:', e.error);
+        if (e.error === 'not-allowed') {
+          setErrorMsg('Microphone permission denied. Click the lock icon in your browser URL bar to allow microphone.');
+        }
+      };
+
+      recognition.onend = () => {
+        if (isLiveRef.current && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {
+            // Already started or busy
+          }
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.warn('Speech recognition init note:', err);
+    }
+  };
 
   // Initialize and Join Channel
   const handleJoin = useCallback(async () => {
     setConnecting(true);
     setErrorMsg(null);
+    isLiveRef.current = true;
+    setIsJoined(true);
+    onConnectionChange?.(true);
+
+    // 1. Immediately request microphone access and start audio visualizer
+    await setupAudioVisualizer();
+
+    // 2. Set up speech recognition
+    setupSpeechRecognition();
 
     try {
-      // 1. Fetch Agora token from our API route
+      // 3. Fetch Agora token from our API route
       const tokenRes = await fetch(
         `/api/generate-agora-token?channel=${encodeURIComponent(channelName)}&incidentId=${encodeURIComponent(incidentId)}`,
       );
 
       const tokenData = await tokenRes.json();
 
-      if (!tokenRes.ok || !tokenData.token) {
-        throw new Error(tokenData.error || 'Failed to obtain Agora token. Check your AGORA_APP_ID & AGORA_APP_CERTIFICATE.');
+      if (tokenData.demo_mode) {
+        setAgentStatus('listening');
+        onAgentStateChange?.('listening');
+        return;
       }
 
-      // 2. Dynamically import Agora RTC SDK in browser
+      if (!tokenRes.ok || !tokenData.token) {
+        throw new Error(tokenData.error || 'Failed to obtain Agora token.');
+      }
+
+      // 4. Dynamically import Agora RTC SDK in browser
       const { default: AgoraRTC } = await import('agora-rtc-sdk-ng');
 
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
@@ -93,12 +205,10 @@ export default function AgoraVoiceRoom({
         console.warn('Could not publish mic audio track:', micErr);
       }
 
-      setIsJoined(true);
-      onConnectionChange?.(true);
       setAgentStatus('joined');
       onAgentStateChange?.('joined');
 
-      // 3. Invite Agora Cloud AI Voice Agent (non-fatal if cloud agent service is not enabled)
+      // Invite Agora Cloud AI Voice Agent
       fetch('/api/invite-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,104 +226,24 @@ export default function AgoraVoiceRoom({
         .catch((err) => {
           console.warn('Agora agent invite note:', err);
         });
-
-      // 4. Set up live Speech Recognition in browser for real-time speech capture
-      setupSpeechRecognition();
-
-      // 5. Set up Audio Analyzer for visualizer
-      setupAudioVisualizer();
     } catch (err: any) {
       console.error('Agora join error:', err);
-      setErrorMsg(err.message || 'Failed to connect to Agora voice channel.');
-      // Enable browser speech recognition as a fallback even if Agora token fails
-      setupSpeechRecognition();
-      setIsJoined(true);
-      onConnectionChange?.(true);
+      // Fallback is already active via setupAudioVisualizer and setupSpeechRecognition
     } finally {
       setConnecting(false);
     }
   }, [channelName, incidentId, onConnectionChange, onAgentStateChange]);
 
-  // Audio level visualizer analyzer
-  const setupAudioVisualizer = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioCtx;
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
-      const source = audioCtx.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const updateVolume = () => {
-        if (!isJoined) return;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-        const avg = sum / dataArray.length;
-        setMicVolume(Math.min(100, Math.round((avg / 128) * 100)));
-        requestAnimationFrame(updateVolume);
-      };
-      updateVolume();
-    } catch (err) {
-      console.warn('Audio visualizer fallback:', err);
-    }
-  };
-
-  // Browser speech recognition fallback for seamless real-time mic turns
-  const setupSpeechRecognition = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) return;
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-
-        if (interimTranscript) {
-          setCurrentTurn(interimTranscript);
-        }
-
-        if (finalTranscript.trim()) {
-          setCurrentTurn(null);
-          onTranscriptTurn(finalTranscript.trim(), 'Incident Responder', false);
-        }
-      };
-
-      recognition.onerror = (e: any) => {
-        console.warn('Speech recognition status:', e.error);
-      };
-
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (err) {
-      console.warn('Speech recognition init note:', err);
-    }
-  };
-
   // Leave Channel
   const handleLeave = async () => {
+    isLiveRef.current = false;
     try {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
       }
       if (localAudioTrackRef.current) {
         localAudioTrackRef.current.stop();
@@ -324,6 +354,20 @@ export default function AgoraVoiceRoom({
                 <Mic className="w-3.5 h-3.5 text-emerald-400" /> Mic Active
               </>
             )}
+          </button>
+
+          <button
+            onClick={() => {
+              onTranscriptTurn(
+                "Payment API latency has spiked to 8400ms across US-East checkout pods. Connection pool is saturated.",
+                "Incident Responder",
+                false
+              );
+            }}
+            title="Simulate a spoken voice statement into the incident room"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Speak Test Phrase
           </button>
 
           <button
