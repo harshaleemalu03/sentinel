@@ -110,6 +110,8 @@ export default function SentinelCommandCenter() {
   // Manual input state
   const [manualText, setManualText] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState<'Priya Sharma' | 'Rahul Mehta' | 'Sentinel'>('Priya Sharma');
+  const [isRecording, setIsRecording] = useState(false);
+  const inlineRecognitionRef = useRef<any>(null);
 
   // Metrics
   const [systemHealth, setSystemHealth] = useState(96.4);
@@ -359,6 +361,63 @@ export default function SentinelCommandCenter() {
 
     sendEvent(manualText, selectedSpeaker, role);
     setManualText('');
+  };
+
+  // Inline microphone voice recording toggle (Speech-to-Text)
+  const toggleInlineRecording = () => {
+    if (isRecording) {
+      if (inlineRecognitionRef.current) {
+        try {
+          inlineRecognitionRef.current.stop();
+        } catch (e) {
+          console.warn('Recognition stop error:', e);
+        }
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Your browser does not support Web Speech API. Please use Chrome, Edge, or join the Agora Incident Room at the top.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setManualText(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Inline recording status:', event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+      inlineRecognitionRef.current = recognition;
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      setIsRecording(false);
+    }
   };
 
   const facts = incidentState?.facts || [];
@@ -635,19 +694,28 @@ ${timeline.map((t) => `- **${t.timestamp}** [${t.event_type}]: ${t.description}`
               ))}
             </div>
 
-            {/* Manual test speech input */}
+            {/* Manual test speech input & voice recorder */}
             <form onSubmit={handleManualSubmit} className="p-3 bg-[#1c2128] border-t border-[#30363d]">
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-[10px] uppercase font-bold text-zinc-400">Speak as:</label>
-                <select
-                  value={selectedSpeaker}
-                  onChange={(e) => setSelectedSpeaker(e.target.value as any)}
-                  className="text-xs bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-zinc-200 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="Priya Sharma">Priya Sharma (Incident Commander)</option>
-                  <option value="Rahul Mehta">Rahul Mehta (DevOps)</option>
-                  <option value="Sentinel">Sentinel (AI Incident Commander)</option>
-                </select>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] uppercase font-bold text-zinc-400">Speak as:</label>
+                  <select
+                    value={selectedSpeaker}
+                    onChange={(e) => setSelectedSpeaker(e.target.value as any)}
+                    className="text-xs bg-[#0d1117] border border-[#30363d] rounded px-2 py-0.5 text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="Priya Sharma">Priya Sharma (Incident Commander)</option>
+                    <option value="Rahul Mehta">Rahul Mehta (DevOps)</option>
+                    <option value="Sentinel">Sentinel (AI Incident Commander)</option>
+                  </select>
+                </div>
+
+                {isRecording && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-semibold animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                    Recording Voice...
+                  </span>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -655,12 +723,37 @@ ${timeline.map((t) => `- **${t.timestamp}** [${t.event_type}]: ${t.description}`
                   type="text"
                   value={manualText}
                   onChange={(e) => setManualText(e.target.value)}
-                  placeholder="Type or speak a statement into the bridge..."
-                  className="flex-1 text-xs bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                  placeholder={
+                    isRecording
+                      ? '🎙️ Listening... speak clearly into your mic'
+                      : 'Type or click Record to speak into bridge...'
+                  }
+                  className={`flex-1 text-xs bg-[#0d1117] border rounded-lg px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none transition-colors ${
+                    isRecording
+                      ? 'border-red-500/60 ring-1 ring-red-500/30'
+                      : 'border-[#30363d] focus:border-indigo-500'
+                  }`}
                 />
+
+                {/* Direct Voice Recording Button */}
+                <button
+                  type="button"
+                  onClick={toggleInlineRecording}
+                  title={isRecording ? 'Stop voice recording' : 'Click to record voice with microphone'}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    isRecording
+                      ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30'
+                      : 'bg-[#21262d] hover:bg-[#30363d] text-zinc-200 border border-[#30363d] hover:text-white'
+                  }`}
+                >
+                  <Mic className={`w-3.5 h-3.5 ${isRecording ? 'text-white' : 'text-indigo-400'}`} />
+                  <span className="hidden sm:inline">{isRecording ? 'Stop' : 'Record'}</span>
+                </button>
+
                 <button
                   type="submit"
-                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors"
+                  disabled={!manualText.trim()}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold flex items-center justify-center transition-colors"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
