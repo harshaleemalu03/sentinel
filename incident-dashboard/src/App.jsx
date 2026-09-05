@@ -37,7 +37,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-const API_BASE = "http://localhost:8000";
+const API_BASE = "";
 /* =========================================================
    DATA
 ========================================================= */
@@ -197,7 +197,7 @@ function App() {
   const [incidents, setIncidents] = useState(initialIncidents);
   const [backendConnected, setBackendConnected] = useState(false);
   useEffect(() => {
-  fetch(`${API_BASE}/health`)
+  fetch(`${API_BASE}/api/health`)
     .then((response) => {
       if (!response.ok) {
         throw new Error("Backend not responding");
@@ -316,6 +316,89 @@ useEffect(() => {
   };
 
   /* =========================================================
+     BACKEND EVENT INGESTION
+  ========================================================= */
+
+  const sendTranscriptEvent = async ({ eventId, text, speaker }) => {
+    const response = await fetch(
+      `${API_BASE}/api/v1/incidents/INC-2048/events`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          incident_id: "INC-2048",
+          timestamp: new Date().toISOString(),
+          speaker,
+          text,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Backend event failed (${response.status}): ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.incident_state) {
+      const state = data.incident_state;
+
+      setIncidents((currentIncidents) =>
+        currentIncidents.map((incident) =>
+          incident.id === state.incident_id
+            ? {
+                ...incident,
+                title: state.title,
+                severity: state.severity,
+                status: state.status,
+                time: "now",
+              }
+            : incident
+        )
+      );
+
+      setSelectedIncident((current) =>
+        current.id === state.incident_id
+          ? {
+              ...current,
+              title: state.title,
+              severity: state.severity,
+              status: state.status,
+              time: "now",
+            }
+          : current
+      );
+    }
+
+    try {
+      const [timelineResponse, summaryResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/v1/incidents/INC-2048/timeline`),
+        fetch(`${API_BASE}/api/v1/incidents/INC-2048/summary`),
+      ]);
+
+      if (timelineResponse.ok) {
+        const timelineData = await timelineResponse.json();
+        setTimeline(timelineData.timeline || []);
+      }
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        setIncidentSummary(summaryData);
+      }
+    } catch (refreshError) {
+      console.error("Failed to refresh incident intelligence:", refreshError);
+    }
+
+    return data;
+  };
+
+  /* =========================================================
      LIVE SIMULATION
   ========================================================= */
 
@@ -326,6 +409,12 @@ useEffect(() => {
     setSimulationStep(1);
     setAiStatus("Analyzing signals...");
     setAiScore(87);
+
+    sendTranscriptEvent({
+      eventId: `SIM-${Date.now()}-1`,
+      speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+      text: "Simulation started. Correlating application, infrastructure and deployment signals.",
+    }).catch((error) => console.error("Simulation event 1 failed:", error));
 
     setTimeline((previous) => [
       ...previous,
@@ -363,6 +452,12 @@ useEffect(() => {
       setAiStatus("Correlating evidence...");
       setAiScore(91);
       setSystemHealth(96.8);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-2`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Correlated deployment v4.8.2 with elevated payment error rates across multiple signals.",
+      }).catch((error) => console.error("Simulation event 2 failed:", error));
       setResponseTime("3m 48s");
 
       setTimeline((previous) => [
@@ -384,6 +479,12 @@ useEffect(() => {
       setAiStatus("Root cause identified");
       setAiScore(96);
       setSystemHealth(97.9);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-3`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Root cause candidate identified: payment-service deployment v4.8.2.",
+      }).catch((error) => console.error("Simulation event 3 failed:", error));
 
       setTimeline((previous) => [
         ...previous,
@@ -422,6 +523,12 @@ useEffect(() => {
       setAiStatus("Resolution verified");
       setAiScore(98);
       setSystemHealth(99.2);
+
+      sendTranscriptEvent({
+        eventId: `SIM-${Date.now()}-4`,
+        speaker: { id: "sentinel-ai", name: "Sentinel AI", role: "AI Analyst" },
+        text: "Recovery verified. Payment API error rate returned to normal operating range.",
+      }).catch((error) => console.error("Simulation event 4 failed:", error));
       setResponseTime("3m 21s");
       setResolvedToday((value) => value + 1);
 

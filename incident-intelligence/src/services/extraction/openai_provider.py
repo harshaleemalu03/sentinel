@@ -26,25 +26,33 @@ class OpenAIProvider(LLMProvider):
         context: str = "",
     ) -> ExtractionResult:
 
-        response = await self.client.responses.parse(
-            model="gpt-5-mini",
-            input=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": build_extraction_prompt(
-                        event.text,
-                        context,
-                    ),
-                },
-            ],
-            text_format=ExtractionResult,
-        )
+        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-        if response.output_parsed is None:
+        try:
+            response = await self.client.beta.chat.completions.parse(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": SYSTEM_PROMPT,
+                    },
+                    {
+                        "role": "user",
+                        "content": build_extraction_prompt(
+                            event.text,
+                            context,
+                        ),
+                    },
+                ],
+                response_format=ExtractionResult,
+            )
+
+            parsed = response.choices[0].message.parsed
+            if parsed is None:
+                return ExtractionResult(items=[])
+
+            return parsed
+        except Exception as e:
+            # Fallback to empty extraction result if OpenAI call fails
             return ExtractionResult(items=[])
 
-        return response.output_parsed

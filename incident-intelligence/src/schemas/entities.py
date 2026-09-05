@@ -28,9 +28,12 @@ class EntityPriority(str, Enum):
 
 class ActionStatus(str, Enum):
     PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     BLOCKED = "BLOCKED"
+
 
 
 class ConflictStatus(str, Enum):
